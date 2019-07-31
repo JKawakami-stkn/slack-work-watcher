@@ -81,7 +81,7 @@ def start_task(message):
     data = re.sub(r'\[.*\]', "", text).strip().split(",") # タグと空白を削除
 
     # データを変数に格納
-    task = data[0] # タスク名
+    task_name = data[0] # タスク名
     work_days = data[1] # 作業日数
 
     #作業日数をもとに開始日と終了日を計算
@@ -97,15 +97,16 @@ def start_task(message):
         # 作業者名を取得
         user_name = functions.getUserName( user_id )
 
-        # TODO : 外部ファイルのメソッドを呼び出し、DBに登録する処理を行う]
-        # 仕事をしていない日などないはずなので開始予定日は前回タスク終了予定日の1日後とする
+        # TODO : 仕事をしていない日などないはずなので開始予定日は前回タスク終了予定日の1日後とする
+        # タスクを登録する
+        if(functions.setTask(task_name, user_id, start, start, finish_schedule)):
+            message.reply("[" + task_name + "]を開始します。開始:" + str(start) + "  終了予定:" + str(finish_schedule))
 
-
-        message.reply("[" + task + "]を開始します。開始:" + str(start) + "  終了予定:" + str(finish_schedule))
-
-        # メッセージの送信先をBot用のチャンネルに変更しメッセージを送信
-        message.body['channel'] = CHANNEL
-        message.send(user_name +"が[" + task + "]を開始しました。開始:" + str(start) + "  終了予定:" + str(finish_schedule))
+            # メッセージの送信先をBot用のチャンネルに変更しメッセージを送信
+            message.body['channel'] = CHANNEL
+            message.send(user_name +"が[" + task_name + "]を開始しました。開始:" + str(start) + "  終了予定:" + str(finish_schedule))
+        else:
+            message.reply("[" + task_name + "]の登録に失敗しました。")
 
     else:
         message.reply("あなた(" + user_id + ")は作業者ではありません。")
@@ -163,7 +164,7 @@ def finish_task(message):
 
 @listen_to(r'^\[確認\].*,\d*$')
 def check_task(message):
-    message.send('誰かがリッスンと投稿したようだ')      # 投稿
+    message.send('誰かがリッスンと投稿したようだ') # 投稿
 
 
 
