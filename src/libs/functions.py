@@ -49,6 +49,7 @@ def setUser(user_id, user_name):
 
 
 
+
 def getUserName(user_id):
 
     try:
@@ -64,12 +65,15 @@ def getUserName(user_id):
         # 結果を取得
         res = cursor.fetchall()
 
+
+
     except mysql.connector.errors.IntegrityError:
         print("名前の取得失敗")
         return None
 
-    cursor.close()
-    db.close()
+    finally:
+        cursor.close()
+        db.close()
 
     print("名前の取得成功")
     return res[0][0]
@@ -100,10 +104,63 @@ def setTask(name, staff_id, start, start_schedule, finish_schedule):
         cursor.close()
         db.close()
 
-    # 登録成功時Trueを返す
     print(name + "の登録に成功")
     return True
 
-def getTask():
-    return None
+
+
+
+def getTask(user_id):
+    try:
+        # dbに接続
+        db, cursor = db_commit()
+
+        # userテーブルのすべてのユーザー情報を取得
+        query = "SELECT * FROM task WHERE staff_id = '" + user_id + "' AND finish IS NULL;"
+
+        # 実行
+        cursor.execute(query)
+
+        # 結果を取得
+        res = cursor.fetchall()
+
+
+    except mysql.connector.errors.IntegrityError:
+        print("名前の取得失敗")
+        return None
+
+    finally:
+        cursor.close()
+        db.close()
+
+    return res
+
+
+
+
+def getAllUsers():
+    try:
+        # dbに接続
+        db, cursor = db_commit()
+
+        # userテーブルのすべてのユーザー情報を取得
+        query = "SELECT * FROM user;"
+
+        # 実行
+        cursor.execute(query)
+
+        # 結果を取得
+        res = cursor.fetchall()
+
+    except mysql.connector.errors.IntegrityError:
+        print("名前の取得失敗")
+        return None
+
+    finally:
+        cursor.close()
+        db.close()
+
+
+    print("名前の取得成功")
+    return res
 

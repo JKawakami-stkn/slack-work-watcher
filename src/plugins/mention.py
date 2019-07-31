@@ -11,6 +11,9 @@ from libs import functions
 # Bot専用のチャンネル
 CHANNEL = "GLYGWPEG7"
 
+
+
+
 ###########################################################################
 ### 名前      ：show_command_list
 ### 説明      ：全ての投稿を監視し、パターンに当てはまらなかった場合に、
@@ -27,6 +30,8 @@ def show_command_list(message):
         ・開始コマンド：[開始](str)タスク名,(int)予定日数\n\
         ・終了コマンド：[終了](str)タスク名\n\
         ・確認コマンド：[確認]')
+
+
 
 
 
@@ -58,6 +63,7 @@ def regist_user(message):
     else:
         # 登録失敗メッセージ
         message.reply("ID( " + user_id +" )は既に登録されています。")
+
 
 
 
@@ -115,11 +121,6 @@ def start_task(message):
 
 
 
-
-
-
-
-
 ###########################################################################
 ### 名前      ：finish_task
 ### 説明      ：Botへのメンションを監視し、終了コマンドが入力されたら、
@@ -144,11 +145,13 @@ def finish_task(message):
 
     # TODO : 外部ファイルのメソッドを呼び出し、DBに登録する処理を行う
 
-    message.reply("[" + task + "]を終了しました。終了:" + str(finish)) # メンション
+    message.reply("[" + task + "]を終了しました。終了:" + str(finish))
 
     # メッセージの送信先をBot用のチャンネルに変更
     message.body['channel'] = CHANNEL
     #message.send(user_name +"が[" + task + "]を終了しました。終了予定:" + str(finish_schedule) + "  終了:" + str(finish))
+
+
 
 
 
@@ -162,9 +165,45 @@ def finish_task(message):
 ### 参照関数  ：
 ###########################################################################
 
-@listen_to(r'^\[確認\].*,\d*$')
+@listen_to(r'^\[確認\]$')
+@respond_to(r'^\[確認\]$')
 def check_task(message):
-    message.send('誰かがリッスンと投稿したようだ') # 投稿
+
+    # 整形したデータを格納
+    data_dict = {}
+
+    # 出力するメッセージ
+    message_str = ""
+
+    # 全てのユーザーのデータを取得
+    users_data = functions.getAllUsers()
+
+    # 格納ループ
+    for user_data in users_data:
+
+        # 名前とIDを取り出す
+        user_id = user_data[0]
+        user_name = user_data[1]
+
+        # ユーザーのタスクを取得する
+        task_data = functions.getTask(user_id)
+
+        # 情報を辞書に追加
+        data_dict[user_name] = task_data
+
+        # メッセージ生成
+        message_str += "###    担当者 : " + user_name + "    ##########\n" # ユーザ名
+
+        for task in task_data:
+
+            # タスク情報
+            message_str +=  "ID:"    + str(task[0])\
+                         +   "  名前:"   + task[1]\
+                         +   "  開始日:"     + str(task[3])\
+                         +   "  開始予定日:" + str(task[5])\
+                         +   "  終了予定日:" + str(task[6]) + "\n"
+
+    message.reply(message_str)
 
 
 
