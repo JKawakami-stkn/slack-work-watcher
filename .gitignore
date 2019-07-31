@@ -1,7 +1,10 @@
-# eclips��Pydev�v���W�F�N�g���쐬�����ۂɎ������������t�@�C��
+﻿# eclipsでPydevプロジェクトを作成した際に自動生成されるファイル
 .project
 .pydevproject
 .settings/
 
-# Slack�{�b�g�̐ݒ�t�@�C��(�g�[�N�����L�ڂ���Ă��邽�ߏ��O)
+# Slackボットの設定ファイル(トークンが記載されているため除外)
 slackbot_settings.py
+
+# ファイルをインポートした際に生成されるバイナリファイル
+*.pyc
