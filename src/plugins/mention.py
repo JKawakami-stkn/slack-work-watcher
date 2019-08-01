@@ -26,10 +26,11 @@ CHANNEL = "GLYGWPEG7"
 @default_reply()
 def show_command_list(message):
     message.send(' - コマンド一覧 - \n\
-        ・登録コマンド：[登録](str[a-zA-Z])表示名\n\
+        ・登録コマンド：[登録](str)表示名\n\
         ・開始コマンド：[開始](str)タスク名,(int)予定日数\n\
-        ・終了コマンド：[終了](str)タスク名\n\
-        ・確認コマンド：[確認]')
+        ・確認コマンド：[確認]\n\
+        ・終了コマンド：[終了](int)タスクID')
+
 
 
 
@@ -44,7 +45,7 @@ def show_command_list(message):
 ### 参照関数  ：
 ###########################################################################
 
-@respond_to(r'^\[登録\][a-zA-Z]+$')
+@respond_to(r'^\[登録\].+$')
 def regist_user(message):
 
     # メッセージを取り出す
@@ -72,7 +73,7 @@ def regist_user(message):
 ### 名前      ：start_task
 ### 説明      ：Botへのメンションを監視し、開始コマンドが入力されたら、
 ###                   DBにタスクの情報を登録し、遅れなどの情報を表示する
-### 引数      ：(message) 情報
+### 引数      ：(message) 投稿されたメッセージに関する情報
 ### 戻り値    ：なし
 ### 参照関数  ：
 ###########################################################################
@@ -90,22 +91,25 @@ def start_task(message):
     task_name = data[0] # タスク名
     work_days = data[1] # 作業日数
 
-    #作業日数をもとに開始日と終了日を計算
-    start = datetime.date.today()
-    finish_schedule = start + datetime.timedelta(days=int(work_days))
-
     # ユーザーidを取り出す
     user_id = message.body["user"]
 
     # 作業者が登録されているか確認する
-    if(functions.getUserName( user_id ) is not None):
+    if(functions.getUserData( user_id ) is not None):
 
         # 作業者名を取得
-        user_name = functions.getUserName( user_id )
+        user_name = functions.getUserData(user_id)
 
-        # TODO : 仕事をしていない日などないはずなので開始予定日は前回タスク終了予定日の1日後とする
+        # 前回タスクの終了予定日を取得し、その次の日を開始予定日とする。
+        last_finish_schedule = functions.get_last_finish_schedule(user_id)
+        start_schedule = last_finish_schedule + datetime.timedelta(days=int(1))
+
+        # 作業日数をもとに開始日と終了予定日を計算
+        start = datetime.date.today()
+        finish_schedule =  start_schedule + datetime.timedelta(days=int(work_days))
+
         # タスクを登録する
-        if(functions.setTask(task_name, user_id, start, start, finish_schedule)):
+        if(functions.setTask(task_name, user_id, start, start_schedule, finish_schedule)):
             message.reply("[" + task_name + "]を開始します。開始:" + str(start) + "  終了予定:" + str(finish_schedule))
 
             # メッセージの送信先をBot用のチャンネルに変更しメッセージを送信
@@ -125,42 +129,63 @@ def start_task(message):
 ### 名前      ：finish_task
 ### 説明      ：Botへのメンションを監視し、終了コマンドが入力されたら、
 ###                 DBに終了日時を登録し、遅れなどの情報を表示する
-### 引数      ：(message) 情報
+### 引数      ：(message) 投稿されたメッセージに関する情報
 ### 戻り値    ：なし
 ### 参照関数  ：
 ###########################################################################
 
-@respond_to(r'^\[終了\].+$')
+@respond_to(r'^\[終了\][0-9]+$')
 def finish_task(message):
+    # FIXME : すでに終了日時に値が入ってるレコードも更新される
 
     # メッセージを取り出す
     text = message.body['text']
 
-    # メッセージテキストからタスク名を取得
-    task = re.sub(r'\[.*\]', "", text).strip() # タグと空白を削除
+    # メッセージテキストからタスクIDまたはタスク名を取得
+    task_id = re.sub(r'\[.*\]', "", text).strip() # タグと空白を削除
+
+    # メッセージからユーザーID取得
+    user_id = message.body["user"]
+
+    # タスクIDからタスクの全情報を取得
+    task_data = functions.getTaskData(task_id)
 
 
-    # 現在日時を該当タスクの終了日に設定
-    finish = datetime.date.today()
+    print( task_data)
+    # 値が取れているか
+    if(len( task_data) != 0):
+        # 必要なデータを抽出
+        task_name = task_data[0][1]
+        staff_id = task_data[0][2]
+        finish = task_data[0][4]
+        finish_schedule = task_data[0][6]
 
-    # TODO : 外部ファイルのメソッドを呼び出し、DBに登録する処理を行う
+        if(staff_id == user_id and  finish is None):
+            # ユーザIDからユーザ名を取得
+            user_name = functions.getUserData(user_id)
 
-    message.reply("[" + task + "]を終了しました。終了:" + str(finish))
+            # 現在日時を該当タスクの終了日に設定
+            finish = datetime.date.today()
 
-    # メッセージの送信先をBot用のチャンネルに変更
-    message.body['channel'] = CHANNEL
-    #message.send(user_name +"が[" + task + "]を終了しました。終了予定:" + str(finish_schedule) + "  終了:" + str(finish))
+            # 終了日を更新
+            functions.setFinish(user_id, task_id,  finish)
 
+            message.reply("[" + task_name + "]を終了しました。終了:" + str(finish))
 
-
+            # メッセージの送信先をBot用のチャンネルに変更
+            message.body['channel'] = CHANNEL
+            message.send(user_name +"が[" + task_name + "]を終了しました。 終了:" + str(finish) + "    終了予定:" + str(finish_schedule))
+        else:
+            message.reply("自分が担当していないタスクか、すでに終了したタスクです。")
+    else:
+        message.reply("タスクが見つかりませんでした。")
 
 
 ###########################################################################
 ### 名前      ：check_task
 ### 説明      ：全ての投稿を監視し、確認コマンドが入力されたら、現在進行中のタスクと
 ###                担当者、遅れの情報などを表示する。
-###
-### 引数      ：(message) 情報
+### 引数      ：(message) 投稿されたメッセージに関する情報
 ### 戻り値    ：なし
 ### 参照関数  ：
 ###########################################################################
@@ -178,7 +203,14 @@ def check_task(message):
     # 全てのユーザーのデータを取得
     users_data = functions.getAllUsers()
 
-    # 格納ループ
+    # ヘッダー部分
+    message_str +="No".ljust(9)\
+                +"タスク名".ljust(30, '　')\
+                +"開始日".center(14)\
+                +"開始予定日".center(14) \
+                +"終了予定日".center(10) + "\n"
+
+    # ユーザーループ
     for user_data in users_data:
 
         # 名前とIDを取り出す
@@ -186,22 +218,23 @@ def check_task(message):
         user_name = user_data[1]
 
         # ユーザーのタスクを取得する
-        task_data = functions.getTask(user_id)
+        task_data = functions.getChargeTask(user_id)
 
         # 情報を辞書に追加
         data_dict[user_name] = task_data
 
         # メッセージ生成
-        message_str += "###    担当者 : " + user_name + "    ##########\n" # ユーザ名
+        message_str += "\n######   " + user_name + "    #############\n" # ユーザ名
 
+        # タスクループ
         for task in task_data:
 
             # タスク情報
-            message_str +=  "ID:"    + str(task[0])\
-                         +   "  名前:"   + task[1]\
-                         +   "  開始日:"     + str(task[3])\
-                         +   "  開始予定日:" + str(task[5])\
-                         +   "  終了予定日:" + str(task[6]) + "\n"
+            message_str  +=  str(task[0]).ljust(10)\
+                         +   str(task[1]).ljust(30, '　')\
+                         +   str(task[3]).center(14)\
+                         +   str(task[5]).center(14)\
+                         +   str(task[6]).center(14) + "\n"
 
     message.reply(message_str)
 
