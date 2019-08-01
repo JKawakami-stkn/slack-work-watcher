@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import mysql.connector
-
+import datetime
 
 ###########################################################################
 ### 名前      ：db_commit
@@ -294,4 +294,8 @@ def get_last_finish_schedule(user_id):
         cursor.close()
         db.close()
 
-    return res[0][0]
+    # データが取得できなかった場合
+    if(len(res) != 0):
+        return res[0][0]
+    else:
+        return datetime.date.today()

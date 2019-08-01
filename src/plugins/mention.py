@@ -25,11 +25,11 @@ CHANNEL = "GLYGWPEG7"
 
 @default_reply()
 def show_command_list(message):
-    message.send(' - コマンド一覧 - \n\
-        ・登録コマンド：[登録](str)表示名\n\
-        ・開始コマンド：[開始](str)タスク名,(int)予定日数\n\
-        ・確認コマンド：[確認]\n\
-        ・終了コマンド：[終了](int)タスクID')
+    message.send(" - コマンド一覧 - \n"
+        + "・ユーザー登録".ljust(9, "　")  + ":    [登録](str)表示名\n"
+        + "・作業開始".ljust(9, "　")      + ":    [開始](str)タスク名,(int)予定日数\n"
+        + "・作業確認".ljust(9, "　")      + ":    [確認]\n"
+        + "・作業終了".ljust(9, "　")      + ":    [終了](int)タスクID')")
 
 
 
@@ -204,7 +204,7 @@ def check_task(message):
     users_data = functions.getAllUsers()
 
     # ヘッダー部分
-    message_str +="No".ljust(9)\
+    message_str +="\nNo".ljust(9)\
                 +"タスク名".ljust(30, '　')\
                 +"開始日".center(14)\
                 +"開始予定日".center(14) \
