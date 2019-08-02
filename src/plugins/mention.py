@@ -254,7 +254,7 @@ def check_task(message):
 
 @respond_to(r'^\[出力\]$')
 def create_wbs(message):
-    functions.createCSV()
+    functions.createWBS()
     print("出力しました")
 
 

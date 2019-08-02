@@ -4,6 +4,7 @@ import mysql.connector
 import datetime
 import openpyxl as excel
 import time
+import requests
 
 ###########################################################################
 ### 名前      ：db_commit
@@ -347,24 +348,33 @@ def get_last_finish_schedule(user_id):
 
 
 
-
-
 ###########################################################################
-### 名前      ：createCSV
-### 説明      ：CSVファイルを作成
+### 名前      ：sendFile
+### 説明      ：ファイルを送信
 ### 引数      ：(user_id)取得するユーザーのID
 ### 戻り値    ：終了予定日
 ### 参照関数  ：
 ###########################################################################
+def sendFile(token, channel, filepath):
+    print('')
 
-def createCSV():
+
+###########################################################################
+### 名前      ：createWBS
+### 説明      ：CSVファイルを作成
+### 引数      ：(user_id)取得するユーザーのID
+### 戻り値    ：終了予定日
+### 参照関数  ：getUserName()
+###########################################################################
+
+def createWBS():
 
     # 新規ワークブックを作成
     wb = excel.Workbook()
     ws = wb.active
 
     # column = ["No", "タスク", "", "開始予定日", "終了予定日", "開始日", "終了日", "担当者", "ステータス"]
-    column = ["No", "タスク", "担当者", "開始予定日", "終了予定日", "開始日", "終了日", "担当者", "ステータス"]
+    column = ["No", "タスク", "担当者", "開始日", "終了日", "開始予定日", "終了予定日",  "ステータス"]
     # ヘッダー部を作成
     for i in range(1, len(column) + 1):
         ws.cell(column = i, row = 2, value = column[i - 1])
@@ -372,20 +382,47 @@ def createCSV():
     # タスク情報を取得
     tasks = getAllTask()
 
-    # タスク情報書き込み
-    for i, task in enumerate(tasks):
-        for j, data in enumerate(task):
+    # キー:ユーザーID, 値:ユーザ名 の辞書を作成
+    users_data_dict = {}
+    users_data = getAllUsers()
 
-            # 終了しているか確認
-            if(data is not None):
-                ws.cell(column = j + 1, row = i + 3, value = str(data))
-            else:
-                ws.cell(column = j + 1, row = i + 3, value = "")
+    for user_data in users_data:
+        users_data_dict.setdefault(user_data[0], user_data[1])
+
+
+    # タスク情報書き込み
+    for i, task in enumerate(tasks): # 縦
+        for j, data in enumerate(task): # 横
+
+            # ユーザー名
+            if(j == 2):
+                # ユーザー名を表示する処理
+                if(data in users_data_dict):
+                    ws.cell(column = j + 1, row = i + 3, value = users_data_dict[data])
+                    continue
+
+            # 終了日
+            if(j == 4):
+                # ステータス設定
+                if(data is not None):
+                    ws.cell(column = j + 1, row = i + 3, value = str(data))
+                    ws.cell(column = len(task) + 1, row = i + 3, value = "完了")
+                    continue
+                else:
+                    ws.cell(column = j + 1, row = i + 3, value = "")
+                    ws.cell(column = len(task) + 1, row = i + 3, value = "作業中")
+                    print("作業中", j, data)
+                    continue
+
+            ws.cell(column = j + 1, row = i + 3, value = str(data))
+
 
     # 保存
-    wb.save("../files/WBS" + str(time.time()) + ".xlsx")
+    now = time.time()
+    wb.save("../files/WBS" + str(now) + ".xlsx")
 
     print("実行しました")
+    return(now)
 
 
 
