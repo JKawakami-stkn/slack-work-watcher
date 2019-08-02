@@ -25,7 +25,7 @@ CHANNEL = "GLYGWPEG7"
 
 @default_reply()
 def show_command_list(message):
-    message.send(" - コマンド一覧 - \n"
+    message.send(" :kishir:- コマンド一覧 -:kishir: \n"
         + "・ユーザー登録".ljust(9, "　")  + ":    [登録](str)表示名\n"
         + "・作業開始".ljust(9, "　")      + ":    [開始](str)タスク名,(int)予定日数\n"
         + "・作業確認".ljust(9, "　")      + ":    [確認]\n"
@@ -100,9 +100,12 @@ def start_task(message):
         # 作業者名を取得
         user_name = functions.getUserData(user_id)
 
-        # 前回タスクの終了予定日を取得し、その次の日を開始予定日とする。
+        # 前回タスクの終了予定日を取得し、初めての登録でない場合その次の日を開始予定日とする。(休日も働け)
         last_finish_schedule = functions.get_last_finish_schedule(user_id)
-        start_schedule = last_finish_schedule + datetime.timedelta(days=int(1))
+        if(last_finish_schedule == datetime.date.today()):
+            start_schedule = datetime.date.today()
+        else:
+            start_schedule = last_finish_schedule + datetime.timedelta(days=int(1))
 
         # 作業日数をもとに開始日と終了予定日を計算
         start = datetime.date.today()
@@ -110,11 +113,11 @@ def start_task(message):
 
         # タスクを登録する
         if(functions.setTask(task_name, user_id, start, start_schedule, finish_schedule)):
-            message.reply("[" + task_name + "]を開始します。開始:" + str(start) + "  終了予定:" + str(finish_schedule))
+            message.reply("[" + task_name + "]を開始します。開始:" + str(start) + "  開始予定:" + str(start_schedule) + "  終了予定:" + str(finish_schedule))
 
             # メッセージの送信先をBot用のチャンネルに変更しメッセージを送信
             message.body['channel'] = CHANNEL
-            message.send(user_name +"が[" + task_name + "]を開始しました。開始:" + str(start) + "  終了予定:" + str(finish_schedule))
+            message.send(user_name +"が[" + task_name + "]を開始しました。開始:" + str(start) + "  開始予定:" + str(start_schedule) + "  終了予定:" + str(finish_schedule))
         else:
             message.reply("[" + task_name + "]の登録に失敗しました。")
 
@@ -136,7 +139,6 @@ def start_task(message):
 
 @respond_to(r'^\[終了\][0-9]+$')
 def finish_task(message):
-    # FIXME : すでに終了日時に値が入ってるレコードも更新される
 
     # メッセージを取り出す
     text = message.body['text']
@@ -151,15 +153,16 @@ def finish_task(message):
     task_data = functions.getTaskData(task_id)
 
 
-    print( task_data)
     # 値が取れているか
     if(len( task_data) != 0):
+
         # 必要なデータを抽出
         task_name = task_data[0][1]
         staff_id = task_data[0][2]
         finish = task_data[0][4]
         finish_schedule = task_data[0][6]
 
+        # 自分が担当している進行中のタスク
         if(staff_id == user_id and  finish is None):
             # ユーザIDからユーザ名を取得
             user_name = functions.getUserData(user_id)
@@ -224,8 +227,11 @@ def check_task(message):
         data_dict[user_name] = task_data
 
         # メッセージ生成
-        message_str += "\n######   " + user_name + "    #############\n" # ユーザ名
+        message_str += "\n######   *" + user_name + "*    #############\n" # ユーザ名
 
+        # 割り当てタスクなし
+        if(len(task_data) == 0):
+            message_str  +=  "進行中のタスクがありません。\n"
         # タスクループ
         for task in task_data:
 
