@@ -2,6 +2,8 @@
 
 import mysql.connector
 import datetime
+import openpyxl as excel
+import time
 
 ###########################################################################
 ### 名前      ：db_commit
@@ -159,6 +161,48 @@ def setFinish(user_id, task, finish):
     # 登録成功時Trueを返す
     return True
 
+
+
+
+
+###########################################################################
+### 名前      ：getAllTask
+### 説明      ：全てのタスク
+### 引数      ：なし
+### 戻り値    ：
+### 参照関数  ：
+###########################################################################
+def getAllTask():
+
+    res = None;
+
+    try:
+        # dbに接続
+        db, cursor = db_commit()
+
+        # userテーブルのidと一致するユーザーのnameを取得
+        query = "SELECT * FROM task;"
+
+        # 実行
+        cursor.execute(query)
+
+        # 結果を取得
+        res = cursor.fetchall()
+
+    except mysql.connector.errors.IntegrityError:
+        # 取得失敗時Noneを返す
+        return None
+
+    finally:
+        cursor.close()
+        db.close()
+
+    # 登録成功時、タスクの情報を返す
+    return res
+
+
+
+
 ###########################################################################
 ### 名前      ：getTaskData
 ### 説明      ：特定のタスクの名前を取得
@@ -299,3 +343,59 @@ def get_last_finish_schedule(user_id):
         return res[0][0]
     else:
         return datetime.date.today()
+
+
+
+
+
+
+###########################################################################
+### 名前      ：createCSV
+### 説明      ：CSVファイルを作成
+### 引数      ：(user_id)取得するユーザーのID
+### 戻り値    ：終了予定日
+### 参照関数  ：
+###########################################################################
+
+def createCSV():
+
+    # 新規ワークブックを作成
+    wb = excel.Workbook()
+    ws = wb.active
+
+    # column = ["No", "タスク", "", "開始予定日", "終了予定日", "開始日", "終了日", "担当者", "ステータス"]
+    column = ["No", "タスク", "担当者", "開始予定日", "終了予定日", "開始日", "終了日", "担当者", "ステータス"]
+    # ヘッダー部を作成
+    for i in range(1, len(column) + 1):
+        ws.cell(column = i, row = 2, value = column[i - 1])
+
+    # タスク情報を取得
+    tasks = getAllTask()
+
+    # タスク情報書き込み
+    for i, task in enumerate(tasks):
+        for j, data in enumerate(task):
+
+            # 終了しているか確認
+            if(data is not None):
+                ws.cell(column = j + 1, row = i + 3, value = str(data))
+            else:
+                ws.cell(column = j + 1, row = i + 3, value = "")
+
+    # 保存
+    wb.save("../files/WBS" + str(time.time()) + ".xlsx")
+
+    print("実行しました")
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -29,7 +29,8 @@ def show_command_list(message):
         + "・ユーザー登録".ljust(9, "　")  + ":    [登録](str)表示名\n"
         + "・作業開始".ljust(9, "　")      + ":    [開始](str)タスク名,(int)予定日数\n"
         + "・作業確認".ljust(9, "　")      + ":    [確認]\n"
-        + "・作業終了".ljust(9, "　")      + ":    [終了](int)タスクID')")
+        + "・作業終了".ljust(9, "　")      + ":    [終了](int)タスクID'\n"
+        + "・WBSを出力".ljust(9, "　")      + ":    [出力]")
 
 
 
@@ -54,7 +55,7 @@ def regist_user(message):
     # ユーザーIDを取り出す
     user_id = message.body['user']
 
-    # メッセージテキストから表示名を取得
+    # メッセージテキストから表示ユーザー名を取得
     user_name = re.sub(r'\[.*\]', "", text).strip() # タグと空白を削除
 
     # DBにユーザー情報登録
@@ -100,15 +101,19 @@ def start_task(message):
         # 作業者名を取得
         user_name = functions.getUserData(user_id)
 
-        # 前回タスクの終了予定日を取得し、初めての登録でない場合その次の日を開始予定日とする。(休日も働け)
+        # 前回タスクの終了予定日を取得
         last_finish_schedule = functions.get_last_finish_schedule(user_id)
+
+        # 開始予定日を設定する。初めての登録の場合今日、そうでない場合前回タスク終了予定日の次の日をとする。(休日も働け)
         if(last_finish_schedule == datetime.date.today()):
             start_schedule = datetime.date.today()
         else:
             start_schedule = last_finish_schedule + datetime.timedelta(days=int(1))
 
-        # 作業日数をもとに開始日と終了予定日を計算
+        # 開始日を今日に設定
         start = datetime.date.today()
+
+        # 開始予定日と工数から終了予定日を計算
         finish_schedule =  start_schedule + datetime.timedelta(days=int(work_days))
 
         # タスクを登録する
@@ -243,6 +248,22 @@ def check_task(message):
                          +   str(task[6]).center(14) + "\n"
 
     message.reply(message_str)
+
+
+
+
+@respond_to(r'^\[出力\]$')
+def create_wbs(message):
+    functions.createCSV()
+    print("出力しました")
+
+
+
+
+
+
+
+
 
 
 
