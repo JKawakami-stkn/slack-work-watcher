@@ -353,16 +353,6 @@ def get_last_finish_schedule(user_id):
 
 
 
-###########################################################################
-### 名前      ：sendFile
-### 説明      ：ファイルを送信
-### 引数      ：(user_id)取得するユーザーのID
-### 戻り値    ：終了予定日
-### 参照関数  ：
-###########################################################################
-def sendFile(token, channel, filepath):
-    print('')
-
 
 ###########################################################################
 ### 名前      ：createWBS
@@ -532,10 +522,11 @@ def createWBS():
 
     # 保存
     now = time.time()
-    wb.save("../files/WBS" + str(now) + ".xlsx")
+    path = "../files/WBS" + str(now) + ".xlsx"
+    wb.save(path)
 
 
-    return(now)
+    return(path)
 
 
 

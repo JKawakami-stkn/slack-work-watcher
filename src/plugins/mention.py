@@ -1,6 +1,9 @@
 from slackbot.bot import default_reply
 from slackbot.bot import listen_to
 from slackbot.bot import respond_to
+from slacker import Slacker
+
+from slackbot_settings import API_TOKEN
 
 import re
 import datetime
@@ -252,10 +255,34 @@ def check_task(message):
 
 
 
+
+###########################################################################
+### 名前      ：sendFile
+### 説明      ：ファイルを投稿する
+### 引数      ：(message) 投稿されたメッセージに関する情報
+### 戻り値    ：なし
+### 参照関数  ：
+###########################################################################
+
+def sendFile(path):
+
+    slacker = Slacker(API_TOKEN)
+    slacker.files.upload(file_=path, channels=CHANNEL)
+
+
+
+###########################################################################
+### 名前      ：create_wbs
+### 説明      ：WBSを作成する
+### 引数      ：(message) 投稿されたメッセージに関する情報
+### 戻り値    ：なし
+### 参照関数  ：sendFile
+###########################################################################
 @respond_to(r'^\[出力\]$')
 def create_wbs(message):
-    functions.createWBS()
-    message.reply("出力完了")
+    path = functions.createWBS()
+    sendFile(path)
+
 
 
 
