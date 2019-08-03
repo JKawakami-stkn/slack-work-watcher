@@ -30,7 +30,7 @@ def show_command_list(message):
         + "・作業開始".ljust(9, "　")      + ":    [開始](str)タスク名,(int)予定日数\n"
         + "・作業確認".ljust(9, "　")      + ":    [確認]\n"
         + "・作業終了".ljust(9, "　")      + ":    [終了](int)タスクID'\n"
-        + "・WBSを出力".ljust(9, "　")      + ":    [出力]")
+        + "・WBS出力".ljust(9, "　")      + ":    [出力]")
 
 
 
@@ -255,7 +255,7 @@ def check_task(message):
 @respond_to(r'^\[出力\]$')
 def create_wbs(message):
     functions.createWBS()
-    print("出力しました")
+    message.reply("出力完了")
 
 
 

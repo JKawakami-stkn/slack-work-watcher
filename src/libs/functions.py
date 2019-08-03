@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
-
-import mysql.connector
+# 日時
 import datetime
-import openpyxl as excel
 import time
+# mysql
+import mysql.connector
+# ファイル送信に使う
 import requests
+# excel操作
+import openpyxl as excel
+from openpyxl.styles import PatternFill
+from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
 
 ###########################################################################
 ### 名前      ：db_commit
@@ -375,9 +380,27 @@ def createWBS():
 
     # column = ["No", "タスク", "", "開始予定日", "終了予定日", "開始日", "終了日", "担当者", "ステータス"]
     column = ["No", "タスク", "担当者", "開始日", "終了日", "開始予定日", "終了予定日",  "ステータス"]
+
+    # セルの枠線
+    thin = Side(border_style="thin", color="000000")
+    border = Border(top=thin, left=thin, right=thin, bottom=thin)
+
+    # 操作対処のセル
+    this_cell = None
+
+    # プロジェクト開始日
+    project_start_date = None
+
     # ヘッダー部を作成
     for i in range(1, len(column) + 1):
-        ws.cell(column = i, row = 2, value = column[i - 1])
+
+        # セルを取得
+        this_cell = ws.cell(column = i, row = 2, value = column[i - 1])
+        this_cell.fill = PatternFill(fill_type='solid',fgColor='ffde8c') # セルの色
+        this_cell.border = border # 枠線
+
+        # 下のセルと結合
+        ws.merge_cells( start_row = 2, start_column = i, end_row = 3, end_column=i )
 
     # タスク情報を取得
     tasks = getAllTask()
@@ -389,47 +412,130 @@ def createWBS():
     for user_data in users_data:
         users_data_dict.setdefault(user_data[0], user_data[1])
 
-
     # タスク情報書き込み
     for i, task in enumerate(tasks): # 縦
         for j, data in enumerate(task): # 横
+
+            # TODO : 変わるvalueのみを変数に格納しborder処理を減らす
+
+            width =  i + 4
+            height = j + 1
+
+            # プロジェクトの開始日を取得
+            if(i == 0 and j== 3):
+                project_start_date = data
 
             # ユーザー名
             if(j == 2):
                 # ユーザー名を表示する処理
                 if(data in users_data_dict):
-                    ws.cell(column = j + 1, row = i + 3, value = users_data_dict[data])
+                    this_cell = ws.cell(column = height, row = width, value = users_data_dict[data])
+                    this_cell.border = border # 枠線
                     continue
 
             # 終了日
             if(j == 4):
                 # ステータス設定
                 if(data is not None):
-                    ws.cell(column = j + 1, row = i + 3, value = str(data))
-                    ws.cell(column = len(task) + 1, row = i + 3, value = "完了")
+                    this_cell = ws.cell(column = height, row = width, value = str(data))
+                    this_cell.border = border # 枠線
+                    this_cell = ws.cell(column = len(task) + 1, row = width, value = "完了")
+                    this_cell.border = border # 枠線
                     continue
                 else:
-                    ws.cell(column = j + 1, row = i + 3, value = "")
-                    ws.cell(column = len(task) + 1, row = i + 3, value = "作業中")
-                    print("作業中", j, data)
+                    this_cell = ws.cell(column = height, row = width, value = "")
+                    this_cell.border = border # 枠線
+                    this_cell = ws.cell(column = len(task) + 1, row = width, value = "作業中")
+                    this_cell.border = border # 枠線
                     continue
 
-            ws.cell(column = j + 1, row = i + 3, value = str(data))
+            this_cell = ws.cell(column = j + 1, row = width, value = str(data))
+
+            this_cell.border = border # 枠線
+
+    # 曜日名
+    weekname = ["月","火","水","木","金","土", "日"]
+
+    # 月
+    this_month = 0
+
+
+
+    # 366日分を繰り返してセルに書き込む
+    tm = project_start_date
+
+    # 月の始まりのセル
+    start_month_width  = 9
+
+    for i in range(1, 367):
+
+        width =  i + 8
+        height = 1
+
+        # 月初めのみ出力
+        if(this_month != tm.month):
+            this_cell = ws.cell(column = width, row = height, value=tm.month)
+            this_month = tm.month
+            this_cell.border = border # 枠線
+            # 最初の月じゃない場合に結合
+            # FIXME : 最後の月が結合されない
+            if(i != 1):
+                # セルと結合
+                ws.merge_cells( start_row = height, start_column = start_month_width, end_row = height, end_column = width - 1)
+                start_month_width = width
+
+        this_cell = ws.cell(column=i + 8, row=2, value=tm.day)
+        this_cell.border = border # 枠線
+        this_cell = ws.cell(column=i + 8, row=3, value=weekname[tm.weekday()])
+        this_cell.border = border # 枠線
+
+        # 翌日
+        tm = tm + datetime.timedelta(days=1)
+
+
+    # プロジェクト開始日のセル
+    project_start_sell = 9
+    project_start_date
+
+    # 予定出力
+    for i, data in enumerate(tasks):
+
+        # タスク開始予定セルを取得
+        start_cell = (data[5] - project_start_date).days + project_start_sell
+
+        # タスク終了予定セルを取得
+        finish_cell = (data[6] - project_start_date).days + project_start_sell
+
+        # せる塗りつぶし
+        for j in range(start_cell, finish_cell + 1):
+            this_cell = ws.cell(column = j, row = i + 4)
+            this_cell.fill = PatternFill(fill_type='solid',fgColor='f4ff78') # セルの色
+
+
+    # 実績出力
+    for i, data in enumerate(tasks):
+
+        # タスク開始セルを取得
+        start_cell = (data[3] - project_start_date).days + project_start_sell
+
+        # タスク終了セルを取得
+        if(data[4] is not None):
+            finish_cell = (data[4] - project_start_date).days + project_start_sell
+        else:
+            finish_cell = (datetime.date.today() - project_start_date).days + project_start_sell
+
+        # せる塗りつぶし
+        for j in range(start_cell, finish_cell + 1):
+            this_cell = ws.cell(column = j, row = i + 4)
+            this_cell.fill = PatternFill(fill_type='solid',fgColor='4aaeff') # セルの色
 
 
     # 保存
     now = time.time()
     wb.save("../files/WBS" + str(now) + ".xlsx")
 
-    print("実行しました")
+
     return(now)
-
-
-
-
-
-
-
 
 
 
