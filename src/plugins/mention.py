@@ -240,6 +240,7 @@ def check_task(message):
         # 割り当てタスクなし
         if(len(task_data) == 0):
             message_str  +=  "進行中のタスクがありません。\n"
+
         # タスクループ
         for task in task_data:
 
@@ -257,39 +258,22 @@ def check_task(message):
 
 
 ###########################################################################
-### 名前      ：sendFile
-### 説明      ：ファイルを投稿する
-### 引数      ：(message) 投稿されたメッセージに関する情報
-### 戻り値    ：なし
-### 参照関数  ：
-###########################################################################
-
-def sendFile(path):
-
-    slacker = Slacker(API_TOKEN)
-    slacker.files.upload(file_=path, channels=CHANNEL)
-
-
-
-###########################################################################
 ### 名前      ：create_wbs
 ### 説明      ：WBSを作成する
 ### 引数      ：(message) 投稿されたメッセージに関する情報
 ### 戻り値    ：なし
 ### 参照関数  ：sendFile
 ###########################################################################
+
 @respond_to(r'^\[出力\]$')
 def create_wbs(message):
+    # WBSを作成しファイルのパスを格納
     path = functions.createWBS()
-    sendFile(path)
 
-
-
-
-
-
-
-
+    # ファイル送信
+    slacker = Slacker(API_TOKEN)
+    # slacker.files.upload(file_=path, channels=CHANNEL)
+    slacker.files.upload(file_=path, channels=message.body['channel'])
 
 
 

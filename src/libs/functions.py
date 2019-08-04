@@ -4,12 +4,13 @@ import datetime
 import time
 # mysql
 import mysql.connector
-# ファイル送信に使う
-import requests
+
 # excel操作
 import openpyxl as excel
-from openpyxl.styles import PatternFill
-from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
+# from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
+from openpyxl.styles import Border, Side, PatternFill
+
+
 
 ###########################################################################
 ### 名前      ：db_commit
@@ -362,6 +363,7 @@ def get_last_finish_schedule(user_id):
 ### 参照関数  ：getUserName()
 ###########################################################################
 
+# TODO : 予定より開始が早いタスクと予定より遅れているタスクをぱっと見で分かるように色分けする
 def createWBS():
 
     # 新規ワークブックを作成
