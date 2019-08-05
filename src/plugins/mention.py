@@ -11,9 +11,6 @@ from consts import *
 
 from libs import functions
 
-# Bot専用のチャンネル
-CHANNEL = "GLYGWPEG7"
-
 
 
 
@@ -153,25 +150,23 @@ def finish_task(message):
 
         task_data = functions.trimQueryResult(query_to_get_task_data_result, TASK_COLUMN)
 
-        task_name = task_data["name"]
-        staff_id = task_data["staff"]
-        finish = task_data["finish"]
-        finish_schedule = task_data["finish_schedule"]
+        task_name = task_data[0]["name"]
+        staff_id = task_data[0]["staff"]
+        finish = task_data[0]["finish"]
+        finish_schedule = task_data[0]["finish_schedule"]
 
         if(staff_id == user_id and  finish is None):
 
-            query_to_get_user_name = "SELECT * FROM task WHERE id = '" + task_id + "';"
+            query_to_get_user_name = "SELECT name FROM user WHERE id = '" + user_id + "';"
             query_to_get_user_name_result = functions.executionQuery( query_to_get_user_name )
-
             user_name = functions.trimQueryResult(query_to_get_user_name_result)
+
+            print(user_name)
 
             finish = datetime.date.today()
 
-            functions.setFinish(user_id, task_id,  finish)
-
-            # query_to_get_user_name = "UPDATE task SET  finish = '"+ str(finish) +"' WHERE  staff_id = '" + user_id + "' AND id = " + str(task_id) +";"
-            query_to_get_user_name = "UPDATE task SET  finish = '"+ str(finish) +"' WHERE id = " + str(task_id) +";"
-            query_to_get_user_name_result = functions.executionQuery( query_to_get_user_name )
+            query_to_set_task_finish = "UPDATE task SET  finish = '"+ str(finish) +"' WHERE id = " + str(task_id) +";"
+            query_to_set_task_finish_result = functions.executionQuery( query_to_set_task_finish )
 
             message.reply("[" + task_name + "]を終了しました。終了:" + str(finish))
 

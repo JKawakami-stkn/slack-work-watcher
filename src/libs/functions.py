@@ -74,8 +74,7 @@ def executionQuery(query):
 
         return result
 
-    except mysql.connector.errors:
-
+    except mysql.connector.errors.IntegrityError:
         return False
 
     finally:
