@@ -3,11 +3,11 @@ from slackbot.bot import listen_to
 from slackbot.bot import respond_to
 from slacker import Slacker
 
-from slackbot_settings import API_TOKEN
-
 import re
 import datetime
 
+from slackbot_settings import API_TOKEN
+from consts import *
 
 from libs import functions
 
@@ -28,12 +28,15 @@ CHANNEL = "GLYGWPEG7"
 
 @default_reply()
 def show_command_list(message):
-    message.send(" :kishir:- コマンド一覧 -:kishir: \n"
-        + "・ユーザー登録".ljust(9, "　")  + ":    [登録](str)表示名\n"
-        + "・作業開始".ljust(9, "　")      + ":    [開始](str)タスク名,(int)予定日数\n"
-        + "・作業確認".ljust(9, "　")      + ":    [確認]\n"
-        + "・作業終了".ljust(9, "　")      + ":    [終了](int)タスクID'\n"
-        + "・WBS出力".ljust(9, "　")      + ":    [出力]")
+
+    message_to_sent = " :kishir:- コマンド一覧 -:kishir: \n" +\
+                    "・ユーザー登録"      +    ":    [登録](str)表示名\n"+\
+                    "・作業開始　　"      +    ":    [開始](str)タスク名,(int)予定日数\n"+\
+                    "・作業確認　　"      +    ":    [確認]\n"+\
+                    "・作業終了　　"      +    ":    [終了](int)タスクID'\n"+\
+                    "・WBS出力　　 "      +   ":    [出力]"
+
+    message.send(message_to_sent)
 
 
 
@@ -52,24 +55,18 @@ def show_command_list(message):
 @respond_to(r'^\[登録\].+$')
 def regist_user(message):
 
-    # メッセージを取り出す
-    text = message.body['text']
-
-    # ユーザーIDを取り出す
+    user_name = re.sub(r'\[.*\]', "", message.body['text']).strip()
     user_id = message.body['user']
 
-    # メッセージテキストから表示ユーザー名を取得
-    user_name = re.sub(r'\[.*\]', "", text).strip() # タグと空白を削除
+    query_to_register_user = "INSERT INTO user (id, name) VALUES ( '" + user_id + "','" + user_name  +"')"
+    query_result = functions.executionQuery(query_to_register_user)
 
-    # DBにユーザー情報登録
-    if(functions.setUser(user_id, user_name)):
-        # 登録成功メッセージ
-        message.reply(user_name + "(" + user_id + ")を作業者リストに登録しました。")
+    if(query_result):
+        message_to_sent = user_name + "(" + user_id + ")を作業者リストに登録しました。"
     else:
-        # 登録失敗メッセージ
-        message.reply("ID( " + user_id +" )は既に登録されています。")
+        message_to_sent = "ID( " + user_id +" )は既に登録されています。"
 
-
+    message.reply(message_to_sent)
 
 
 
@@ -85,53 +82,51 @@ def regist_user(message):
 @respond_to(r'^\[開始\].+,\s*\d+$')
 def start_task(message):
 
-    # メッセージを取り出す
-    text = message.body['text']
+    input_data = re.sub(r'\[.*\]', "", message.body['text']).strip().split(",") # タグと空白を削除
 
-    # メッセージテキストからタスク名と作業日数を取得
-    data = re.sub(r'\[.*\]', "", text).strip().split(",") # タグと空白を削除
-
-    # データを変数に格納
-    task_name = data[0] # タスク名
-    work_days = data[1] # 作業日数
-
-    # ユーザーidを取り出す
+    task_name = input_data[0]
+    work_days = input_data[1]
     user_id = message.body["user"]
 
-    # 作業者が登録されているか確認する
-    if(functions.getUserData( user_id ) is not None):
+    query_to_find_user = "SELECT name FROM user WHERE id = '" + user_id + "';"
+    query_to_find_user_result = functions.executionQuery( query_to_find_user )
 
-        # 作業者名を取得
-        user_name = functions.getUserData(user_id)
+    if(query_to_find_user_result):
 
-        # 前回タスクの終了予定日を取得
-        last_finish_schedule = functions.get_last_finish_schedule(user_id)
+        worker_name =  functions.trimQueryResult(query_to_find_user_result)
 
-        # 開始予定日を設定する。初めての登録の場合今日、そうでない場合前回タスク終了予定日の次の日をとする。(休日も働け)
-        if(last_finish_schedule == datetime.date.today()):
-            start_schedule = datetime.date.today()
+        query_to_get_last_work_finish_scheduled = "SELECT MAX(finish_schedule) FROM task WHERE staff_id = '" + user_id + "' GROUP BY staff_id;"
+        query_to_get_last_work_finish_scheduled_result = functions.executionQuery(query_to_get_last_work_finish_scheduled)
+
+        if(query_to_get_last_work_finish_scheduled_result):
+
+            last_work_finish_scheduled = functions.trimQueryResult(query_to_get_last_work_finish_scheduled_result)
+            work_start_schedule = last_work_finish_scheduled + datetime.timedelta(days=int(1))
+
         else:
-            start_schedule = last_finish_schedule + datetime.timedelta(days=int(1))
 
-        # 開始日を今日に設定
-        start = datetime.date.today()
+            work_start_schedule = datetime.date.today()
 
-        # 開始予定日と工数から終了予定日を計算
-        finish_schedule =  start_schedule + datetime.timedelta(days=int(work_days))
+        work_start = datetime.date.today()
+        work_finish_schedule =  work_start_schedule + datetime.timedelta(days=int(work_days))
 
-        # タスクを登録する
-        if(functions.setTask(task_name, user_id, start, start_schedule, finish_schedule)):
-            message.reply("[" + task_name + "]を開始します。開始:" + str(start) + "  開始予定:" + str(start_schedule) + "  終了予定:" + str(finish_schedule))
+        query_to_register_task = "INSERT INTO task (name, staff_id, start, start_schedule, finish_schedule) VALUES ('"+ task_name +"','" +  user_id + "','" +  str(work_start) + "','" +  str(work_start_schedule) + "','" +  str(work_finish_schedule) + "');"
+        query_to_register_task_result = functions.executionQuery( query_to_register_task )
 
-            # メッセージの送信先をBot用のチャンネルに変更しメッセージを送信
+        if(query_to_register_task_result):
+
+            message.reply("[" + task_name + "]を開始します。開始:" + str(work_start) + "  開始予定:" + str(work_start_schedule) + "  終了予定:" + str(work_finish_schedule))
+
             message.body['channel'] = CHANNEL
-            message.send(user_name +"が[" + task_name + "]を開始しました。開始:" + str(start) + "  開始予定:" + str(start_schedule) + "  終了予定:" + str(finish_schedule))
+            message.send(worker_name +"が[" + str(task_name) + "]を開始しました。開始:" + str(work_start) + "  開始予定:" + str(work_start_schedule) + "  終了予定:" + str(work_finish_schedule))
+
         else:
+
             message.reply("[" + task_name + "]の登録に失敗しました。")
 
     else:
-        message.reply("あなた(" + user_id + ")は作業者ではありません。")
 
+        message.reply("あなた(" + user_id + ")は作業者ではありません。")
 
 
 
@@ -148,48 +143,49 @@ def start_task(message):
 @respond_to(r'^\[終了\][0-9]+$')
 def finish_task(message):
 
-    # メッセージを取り出す
-    text = message.body['text']
-
-    # メッセージテキストからタスクIDまたはタスク名を取得
-    task_id = re.sub(r'\[.*\]', "", text).strip() # タグと空白を削除
-
-    # メッセージからユーザーID取得
+    task_id = re.sub(r'\[.*\]', "", message.body['text']).strip() # タグと空白を削除
     user_id = message.body["user"]
 
-    # タスクIDからタスクの全情報を取得
-    task_data = functions.getTaskData(task_id)
+    query_to_get_task_data = "SELECT * FROM task WHERE id = '" + task_id + "';"
+    query_to_get_task_data_result = functions.executionQuery( query_to_get_task_data )
 
+    if(query_to_get_task_data_result):
 
-    # 値が取れているか
-    if(len( task_data) != 0):
+        task_data = functions.trimQueryResult(query_to_get_task_data_result, TASK_COLUMN)
 
-        # 必要なデータを抽出
-        task_name = task_data[0][1]
-        staff_id = task_data[0][2]
-        finish = task_data[0][4]
-        finish_schedule = task_data[0][6]
+        task_name = task_data["name"]
+        staff_id = task_data["staff"]
+        finish = task_data["finish"]
+        finish_schedule = task_data["finish_schedule"]
 
-        # 自分が担当している進行中のタスク
         if(staff_id == user_id and  finish is None):
-            # ユーザIDからユーザ名を取得
-            user_name = functions.getUserData(user_id)
 
-            # 現在日時を該当タスクの終了日に設定
+            query_to_get_user_name = "SELECT * FROM task WHERE id = '" + task_id + "';"
+            query_to_get_user_name_result = functions.executionQuery( query_to_get_user_name )
+
+            user_name = functions.trimQueryResult(query_to_get_user_name_result)
+
             finish = datetime.date.today()
 
-            # 終了日を更新
             functions.setFinish(user_id, task_id,  finish)
+
+            # query_to_get_user_name = "UPDATE task SET  finish = '"+ str(finish) +"' WHERE  staff_id = '" + user_id + "' AND id = " + str(task_id) +";"
+            query_to_get_user_name = "UPDATE task SET  finish = '"+ str(finish) +"' WHERE id = " + str(task_id) +";"
+            query_to_get_user_name_result = functions.executionQuery( query_to_get_user_name )
 
             message.reply("[" + task_name + "]を終了しました。終了:" + str(finish))
 
-            # メッセージの送信先をBot用のチャンネルに変更
             message.body['channel'] = CHANNEL
             message.send(user_name +"が[" + task_name + "]を終了しました。 終了:" + str(finish) + "    終了予定:" + str(finish_schedule))
+
         else:
+
             message.reply("自分が担当していないタスクか、すでに終了したタスクです。")
+
     else:
+
         message.reply("タスクが見つかりませんでした。")
+
 
 
 ###########################################################################
@@ -205,53 +201,42 @@ def finish_task(message):
 @respond_to(r'^\[確認\]$')
 def check_task(message):
 
-    # 整形したデータを格納
-    data_dict = {}
+    message_to_sent ="\nNo".ljust(9)\
+                    +"タスク名".ljust(30, '　')\
+                    +"開始日".center(14)\
+                    +"開始予定日".center(14) \
+                    +"終了予定日".center(10) + "\n"
 
-    # 出力するメッセージ
-    message_str = ""
+    query_to_get_all_user = "SELECT * FROM user;"
+    query_to_get_all_user_result = functions.executionQuery( query_to_get_all_user )
+    users_data = functions.trimQueryResult(query_to_get_all_user_result, USER_COLUMN)
 
-    # 全てのユーザーのデータを取得
-    users_data = functions.getAllUsers()
-
-    # ヘッダー部分
-    message_str +="\nNo".ljust(9)\
-                +"タスク名".ljust(30, '　')\
-                +"開始日".center(14)\
-                +"開始予定日".center(14) \
-                +"終了予定日".center(10) + "\n"
-
-    # ユーザーループ
     for user_data in users_data:
 
-        # 名前とIDを取り出す
-        user_id = user_data[0]
-        user_name = user_data[1]
+        user_id = user_data["id"]
+        user_name = user_data["name"]
 
-        # ユーザーのタスクを取得する
-        task_data = functions.getChargeTask(user_id)
+        query_to_get_charge_task = "SELECT * FROM task WHERE staff_id = '" + user_id + "' AND finish IS NULL;"
+        query_to_get_charge_task_result = functions.executionQuery( query_to_get_charge_task )
+        charge_tasks_data = functions.trimQueryResult(query_to_get_charge_task_result, TASK_COLUMN)
 
-        # 情報を辞書に追加
-        data_dict[user_name] = task_data
+        message_to_sent += "\n######   *" + user_name + "*    #############\n"
 
-        # メッセージ生成
-        message_str += "\n######   *" + user_name + "*    #############\n" # ユーザ名
+        if(charge_tasks_data):
 
-        # 割り当てタスクなし
-        if(len(task_data) == 0):
-            message_str  +=  "進行中のタスクがありません。\n"
+            for task_data in charge_tasks_data:
 
-        # タスクループ
-        for task in task_data:
+                message_to_sent  +=  str(task_data["No"]).ljust(10)\
+                                 +   str(task_data["name"]).ljust(30, '　')\
+                                 +   str(task_data["start"]).center(14)\
+                                 +   str(task_data["start_schedule"]).center(14)\
+                                 +   str(task_data["finish_schedule"]).center(14) + "\n"
 
-            # タスク情報
-            message_str  +=  str(task[0]).ljust(10)\
-                         +   str(task[1]).ljust(30, '　')\
-                         +   str(task[3]).center(14)\
-                         +   str(task[5]).center(14)\
-                         +   str(task[6]).center(14) + "\n"
+        else:
+            message_to_sent  +=  "進行中のタスクがありません。\n"
 
-    message.reply(message_str)
+
+    message.reply(message_to_sent)
 
 
 
