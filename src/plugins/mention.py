@@ -37,9 +37,6 @@ def show_command_list(message):
 
 
 
-
-
-
 ###########################################################################
 ### 名前      ：regist_user
 ### 説明      ：Botへのメンションを監視し、登録コマンドが入力されたら、
@@ -124,7 +121,6 @@ def start_task(message):
     else:
 
         message.reply("あなた(" + user_id + ")は作業者ではありません。")
-
 
 
 
@@ -256,10 +252,4 @@ def create_wbs(message):
     slacker.files.upload(file_=path, channels=message.body['channel'])
 
 
-
-
-@respond_to(r'^\[終了\][0-9]+$')
-def stop(message):
-    import sys
-    sys.exit()
 
