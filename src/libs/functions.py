@@ -119,9 +119,6 @@ def trimQueryResult(query_result, column_name=None):
 
 
 
-
-
-
 ###########################################################################
 ### 名前      ：createWBS
 ### 説明      ：CSVファイルを作成

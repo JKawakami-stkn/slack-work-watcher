@@ -258,5 +258,8 @@ def create_wbs(message):
 
 
 
-
+@respond_to(r'^\[終了\][0-9]+$')
+def stop(message):
+    import sys
+    sys.exit()
 
